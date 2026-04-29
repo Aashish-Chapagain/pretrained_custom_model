@@ -1,0 +1,6 @@
+/env/
+*.npy
+corpus.txt
+checkdatasize.py
+*.vocab
+*.model
