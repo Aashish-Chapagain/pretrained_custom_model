@@ -1,14 +1,17 @@
-from datasets import load_dataset
 import re
 
-ds = load_dataset("lilithyu/kaggle-child-stories")
+from datasets import load_dataset
+
+DATASET_NAME = "lilithyu/kaggle-child-stories"
+OUTPUT_PATH = "corpus.txt"
+
+ds = load_dataset(DATASET_NAME)
 
 
-with open("dataset.txt", "w", encoding="utf-8") as f:
+with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
     for example in ds["train"]:
         text = example["text"].strip()
-        text = re.sub(r"\s+", " ", text)  # Replace multiple whitespace with a single space
-    
+        text = re.sub(r"\s+", " ", text)  
 
         if text : 
          f.write(text + "\n")
