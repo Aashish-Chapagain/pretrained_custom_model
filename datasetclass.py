@@ -2,16 +2,15 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-DEFAULT_SEQUENCE_LENGTH = 256
-DEFAULT_STRIDE = 64
+from config.settings import DATASET
 
 
 class LLMDataset(Dataset):
     def __init__(
         self,
         file_path: str,
-        sequence_length: int = DEFAULT_SEQUENCE_LENGTH,
-        stride: int = DEFAULT_STRIDE,
+        sequence_length: int = DATASET["sequence_length"],
+        stride: int = DATASET["stride"],
     ) -> None:
         self.tokens = torch.tensor(np.load(file_path), dtype = torch.long)
         self.sequence_length = sequence_length
@@ -44,7 +43,7 @@ class LLMDataset(Dataset):
 
 
 
-# dataset = LLMDataset("tokenized_corpus.npy", sequence_length=256 )
+# dataset = LLMDataset(DATASET["path"], sequence_length=DATASET["sequence_length"])
 # print(f"Dataset size: {len(dataset)} sequences")
  
 # x, y = dataset[0]

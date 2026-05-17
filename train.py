@@ -3,21 +3,39 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
+from config.settings import DATASET, MODEL, TRAINING
 from datasetclass import LLMDataset
 from model import MiniLLM
 
+try:
+    import torch_directml
+    _HAS_DIRECTML = True
+except Exception:
+    _HAS_DIRECTML = False
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-CHECKPOINT_PATH = "minillm_checkpoint.pth"
-EPOCH_SAVE_INTERVAL = 20
-VOCAB_SIZE = 5000
-DATASET_PATH = "tokenized_corpus.npy"
-SEQUENCE_LENGTH = 256
-STRIDE = 64
-LEARNING_RATE = 1e-4
-EPOCHS = 10
-BATCH_SIZE = 16
+def resolve_device() -> torch.device:
+    if _HAS_DIRECTML:
+        return torch_directml.device()
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if hasattr(torch, "xpu") and torch.xpu.is_available():
+        return torch.device("xpu")
+    return torch.device("cpu")
+
+
+device = resolve_device()
+print(f"Using device: {device}")
+
+CHECKPOINT_PATH = TRAINING["checkpoint_path"]
+EPOCH_SAVE_INTERVAL = TRAINING["epoch_save_interval"]
+VOCAB_SIZE = MODEL["vocab_size"]
+DATASET_PATH = DATASET["path"]
+SEQUENCE_LENGTH = DATASET["sequence_length"]
+STRIDE = DATASET["stride"]
+LEARNING_RATE = TRAINING["learning_rate"]
+EPOCHS = TRAINING["epochs"]
+BATCH_SIZE = TRAINING["batch_size"]
 
 def train(
     model: MiniLLM,
@@ -33,16 +51,17 @@ def train(
         sequence_length=sequence_length,
         stride=stride,
     )
+    pin_memory = device.type == "cuda"
     dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=True,
         drop_last=True,
-        pin_memory=torch.cuda.is_available(),
+        pin_memory=pin_memory,
     )
 
     model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     criterion = nn.CrossEntropyLoss()
     model.train()
 
@@ -78,5 +97,11 @@ def train(
 
 
 if __name__ == "__main__":
-    model = MiniLLM(vocab_size=VOCAB_SIZE, max_seq_len=SEQUENCE_LENGTH)
+    model = MiniLLM(
+        vocab_size=MODEL["vocab_size"],
+        embedding_dim=MODEL["embedding_dim"],
+        num_heads=MODEL["num_heads"],
+        num_layers=MODEL["num_layers"],
+        max_seq_len=MODEL["max_seq_len"],
+    )
     train(model, sequence_length=SEQUENCE_LENGTH, stride=STRIDE)

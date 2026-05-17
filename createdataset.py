@@ -2,13 +2,12 @@ import re
 
 from datasets import load_dataset
 
-DATASET_NAME = "lilithyu/kaggle-child-stories"
-OUTPUT_PATH = "corpus.txt"
+from config.settings import CORPUS
 
-ds = load_dataset(DATASET_NAME)
+ds = load_dataset(CORPUS["dataset_name"])
 
 
-with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
+with open(CORPUS["output_path"], "w", encoding="utf-8") as f:
     for example in ds["train"]:
         text = example["text"].strip()
         text = re.sub(r"\s+", " ", text)  

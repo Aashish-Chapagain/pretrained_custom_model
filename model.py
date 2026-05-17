@@ -3,11 +3,7 @@ import torch
 import torch.nn as nn
 from torch.nn import Embedding, Linear, Module, TransformerDecoder, TransformerDecoderLayer
 
-DEFAULT_VOCAB_SIZE = 5000
-DEFAULT_EMBEDDING_DIM = 256
-DEFAULT_NUM_HEADS = 8
-DEFAULT_NUM_LAYERS = 4
-DEFAULT_MAX_SEQ_LEN = 256
+from config.settings import MODEL
 
 
 
@@ -16,11 +12,11 @@ DEFAULT_MAX_SEQ_LEN = 256
 class MiniLLM(Module):
     def __init__(
         self,
-        vocab_size: int = DEFAULT_VOCAB_SIZE,
-        embedding_dim: int = DEFAULT_EMBEDDING_DIM,
-        num_heads: int = DEFAULT_NUM_HEADS,
-        num_layers: int = DEFAULT_NUM_LAYERS,
-        max_seq_len: int = DEFAULT_MAX_SEQ_LEN,
+        vocab_size: int = MODEL["vocab_size"],
+        embedding_dim: int = MODEL["embedding_dim"],
+        num_heads: int = MODEL["num_heads"],
+        num_layers: int = MODEL["num_layers"],
+        max_seq_len: int = MODEL["max_seq_len"],
     ) -> None:
         super(MiniLLM, self).__init__()
         self.embedding = Embedding(vocab_size, embedding_dim)
@@ -67,6 +63,6 @@ class MiniLLM(Module):
 
 if __name__ == "__main__":
     model = MiniLLM()
-    input_seq = torch.randint(0, DEFAULT_VOCAB_SIZE, (1, 10))
+    input_seq = torch.randint(0, MODEL["vocab_size"], (1, 10))
     output = model(input_seq)
     # print(output.shape)
