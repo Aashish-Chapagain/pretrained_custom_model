@@ -4,6 +4,8 @@ MODEL = {
     "num_heads": 8,
     "num_layers": 4,
     "max_seq_len": 256,
+    "ffn_dim": 1024,
+    "dropout": 0.1,
 }
 
 DATASET = {
@@ -14,10 +16,12 @@ DATASET = {
 
 TRAINING = {
     "checkpoint_path": "minillm_checkpoint.pth",
-    "epoch_save_interval": 20,
+    "final_model_path": "final_model.pth",
+    "epoch_save_interval": 3,
     "learning_rate": 1e-4,
     "epochs": 10,
     "batch_size": 16,
+    "resume": True,
 }
 
 CORPUS = {
@@ -42,4 +46,10 @@ TOKENIZER = {
     "eos_id": 3,
     "eos_piece": "</s>",
     "tokenized_output_path": "tokenized_corpus.npy",
+}
+
+GENERATE = {
+    "prompt": "Once upon a time",
+    "max_new_tokens": 80,
+    "temperature": 0.8,
 }

@@ -1,4 +1,5 @@
 torch
+torch-directml
 numpy
 datasets
 sentencepiece

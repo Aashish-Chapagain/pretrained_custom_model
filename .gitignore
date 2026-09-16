@@ -1,7 +1,15 @@
+# environment
 /env/
-*.npy
+
+# python cache
+__pycache__/
+*.py[cod]
+
+# generated data
 corpus.txt
-checkdatasize.py
-*.vocab
-*.model
-    
+*.npy
+tokenizer.model
+tokenizer.vocab
+
+# training outputs
+*.pth

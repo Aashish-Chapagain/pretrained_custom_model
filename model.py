@@ -1,12 +1,15 @@
-import numpy as np
 import torch
-import torch.nn as nn
-from torch.nn import Embedding, Linear, Module, TransformerDecoder, TransformerDecoderLayer
+from torch.nn import (
+    Embedding,
+    LayerNorm,
+    Linear,
+    Module,
+    TransformerEncoder,
+    TransformerEncoderLayer,
+)
+from torch.nn import init
 
 from config.settings import MODEL
-
-
-
 
 
 class MiniLLM(Module):
@@ -17,52 +20,53 @@ class MiniLLM(Module):
         num_heads: int = MODEL["num_heads"],
         num_layers: int = MODEL["num_layers"],
         max_seq_len: int = MODEL["max_seq_len"],
+        ffn_dim: int = MODEL["ffn_dim"],
+        dropout: float = MODEL["dropout"],
     ) -> None:
-        super(MiniLLM, self).__init__()
+        super().__init__()
+        self.max_seq_len = max_seq_len
         self.embedding = Embedding(vocab_size, embedding_dim)
-        self.register_buffer(
-            "positional_encoding",
-            self._generate_positional_encoding(embedding_dim, max_seq_len),
-            persistent=False,
-        )
+        self.pos_embedding = Embedding(max_seq_len, embedding_dim)
         self.register_buffer(
             "causal_mask",
             self._generate_causal_mask(max_seq_len),
             persistent=False,
         )
-        decoder_layer = TransformerDecoderLayer(d_model = embedding_dim, nhead = num_heads)
-        self.transformer_decoder = TransformerDecoder(decoder_layer, num_layers = num_layers)
-        self.output_layer = Linear(embedding_dim, vocab_size)
-
-    
-
-    def _generate_positional_encoding(self, embedding_dim : int, max_len : int) -> torch.Tensor:
-        pe = torch.zeros(max_len, embedding_dim)
-        position = torch.arange(0, max_len, dtype = torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, embedding_dim, 2).float() * (-np.log(10000.0)/ embedding_dim))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        return pe
+        encoder_layer = TransformerEncoderLayer(
+            d_model=embedding_dim,
+            nhead=num_heads,
+            dim_feedforward=ffn_dim,
+            dropout=dropout,
+            activation="gelu",
+            batch_first=True,
+            norm_first=True,
+        )
+        self.transformer = TransformerEncoder(
+            encoder_layer,
+            num_layers=num_layers,
+            norm=LayerNorm(embedding_dim),
+            enable_nested_tensor=False,
+        )
+        self.output_layer = Linear(embedding_dim, vocab_size, bias=False)
+        self.output_layer.weight = self.embedding.weight
+        init.normal_(self.embedding.weight, mean=0.0, std=0.02)
+        init.normal_(self.pos_embedding.weight, mean=0.0, std=0.02)
 
     def _generate_causal_mask(self, max_len: int) -> torch.Tensor:
         mask = torch.full((max_len, max_len), float("-inf"))
         return torch.triu(mask, diagonal=1)
-    
 
-
-
-    def forward(self, x : torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         seq_len = x.size(1)
-        x = self.embedding(x) + self.positional_encoding[: seq_len, :].to(x.device)
-        x.transpose_(0,1)
-        attn_mask = self.causal_mask[:seq_len, :seq_len].to(x.device)
-        output = self.transformer_decoder(x, x, tgt_mask=attn_mask, memory_mask=attn_mask)
-        output = self.output_layer(output)
-        return output
-    
+        positions = torch.arange(seq_len, device=x.device)
+        x = self.embedding(x) + self.pos_embedding(positions)
+        attn_mask = self.causal_mask[:seq_len, :seq_len]
+        output = self.transformer(x, mask=attn_mask)
+        return self.output_layer(output)
+
 
 if __name__ == "__main__":
     model = MiniLLM()
     input_seq = torch.randint(0, MODEL["vocab_size"], (1, 10))
     output = model(input_seq)
-    # print(output.shape)
+    print(output.shape)
