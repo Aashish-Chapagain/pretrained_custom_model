@@ -68,3 +68,17 @@ GENERATE = {
     "repetition_penalty": 1.2,
 }
 
+SFT = {
+    "dataset_name": "yahma/alpaca-cleaned",
+    "output_dataset_path": "sft_dataset.npz",
+    "max_samples": 12000,
+    "max_seq_len": 256,
+    "epochs": 2,
+    "batch_size": 16,
+    "learning_rate": 1e-4,
+    "val_split": 0.1,
+    "checkpoint_path": "sft_checkpoint.pth",
+    "finetuned_model_path": "finetuned_model.pth",
+}
+
+

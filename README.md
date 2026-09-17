@@ -145,7 +145,7 @@ Trains a SentencePiece BPE tokenizer with 5,000 vocab and saves token IDs to `to
 python tokenizer.py
 ```
 
-### Step 3: Train the Model
+### Step 3: Train the Model (Pre-training)
 Trains `MiniLLM` using cross-entropy loss and AdamW, with live `tqdm` progress tracking:
 ```powershell
 python train.py
@@ -153,6 +153,23 @@ python train.py
 * Checkpoints are automatically saved to `minillm_checkpoint.pth` after each epoch.
 * The final trained model weights are saved to `final_model.pth`.
 * If interrupted, set `"resume": True` in `config/settings.py` to seamlessly resume from the latest checkpoint.
+
+### Step 4: Supervised Fine-Tuning (SFT for Chat & Q&A)
+Converts the base document-completer into an interactive conversational assistant:
+
+1. **Prepare the SFT Dataset** (downloads Alpaca-cleaned instruction pairs with prompt loss masking):
+```powershell
+python create_sft_dataset.py
+```
+*(Default: ~12,000 instruction-response pairs formatted as `User: ... \nAssistant: ...`)*
+
+2. **Run Supervised Fine-Tuning**:
+```powershell
+python finetune.py
+```
+* Trains from `final_model.pth` with prompt loss masking (`ignore_index=-100`), gradient clipping, and a 90/10 train-validation split.
+* Saves the best checkpoint to `finetuned_model.pth`.
+* `generate.py` and `chat.py` automatically detect and load `finetuned_model.pth`!
 
 ## 💬 Inference & Generation
 

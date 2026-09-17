@@ -5,7 +5,7 @@ import shutil
 import sys
 import torch
 
-from config.settings import MODEL, TOKENIZER, TRAINING
+from config.settings import MODEL, SFT, TOKENIZER, TRAINING
 from model import MiniLLM
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -427,8 +427,12 @@ def export_model(
 ) -> str:
     """Export the trained model, architecture, config, and tokenizer into a portable directory."""
     if weights_path is None:
-        weights_path = TRAINING.get("final_model_path", "final_model.pth")
-        if not os.path.exists(weights_path):
+        sft_path = SFT.get("finetuned_model_path", "finetuned_model.pth")
+        if os.path.exists(sft_path):
+            weights_path = sft_path
+        elif os.path.exists(TRAINING.get("final_model_path", "final_model.pth")):
+            weights_path = TRAINING.get("final_model_path", "final_model.pth")
+        else:
             weights_path = TRAINING.get("checkpoint_path", "minillm_checkpoint.pth")
 
     if not os.path.exists(weights_path):

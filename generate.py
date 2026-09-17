@@ -8,7 +8,7 @@ if hasattr(sys.stdout, "reconfigure"):
 import sentencepiece as spm
 import torch
 
-from config.settings import GENERATE, TOKENIZER, TRAINING
+from config.settings import GENERATE, SFT, TOKENIZER, TRAINING
 from model import MiniLLM
 from train import resolve_device
 
@@ -52,19 +52,30 @@ def evaluate_sequence_accuracy(
     return correct_predictions / total_predictions
 
 
-def load_model(device: torch.device) -> MiniLLM:
+def load_model(device: torch.device, model_path: str = None) -> MiniLLM:
     model = MiniLLM()
+    sft_path = SFT.get("finetuned_model_path", "finetuned_model.pth")
     final_path = TRAINING["final_model_path"]
     checkpoint_path = TRAINING["checkpoint_path"]
 
+    search_paths = []
+    if model_path:
+        search_paths.append((model_path, False))
+    search_paths.extend([
+        (sft_path, False),
+        (final_path, False),
+        (checkpoint_path, True),
+    ])
+
     loaded = False
-    for path, is_checkpoint in [(final_path, False), (checkpoint_path, True)]:
+    for path, is_checkpoint in search_paths:
         if os.path.exists(path):
             state = torch.load(path, map_location="cpu", weights_only=False)
             state_dict = state["model_state_dict"] if is_checkpoint else state
             try:
                 model.load_state_dict(state_dict)
-                print(f"Loaded {path}")
+                desc = " (Instruction Fine-Tuned)" if path == sft_path else ""
+                print(f"Loaded {path}{desc}")
                 loaded = True
                 break
             except RuntimeError as exc:
@@ -74,8 +85,8 @@ def load_model(device: torch.device) -> MiniLLM:
 
     if not loaded:
         raise RuntimeError(
-            "No compatible weights found for the current model architecture (e.g. sequence length changed).\n"
-            "Please run 'python train.py' to train the model on the new dataset."
+            "No compatible weights found for the current model architecture.\n"
+            "Please run 'python train.py' to train the model."
         )
 
     model.to(device)
@@ -241,11 +252,11 @@ def chat_loop(
             print("\n[Conversation context reset to start]\n")
             continue
 
-        # Append turn to context
+        # Format conversational turn with User and Assistant labels
         if not history_tokens:
-            prompt_turn = f"{user_input}\n"
+            prompt_turn = f"User: {user_input}\nAssistant: "
         else:
-            prompt_turn = f"\n{user_input}\n"
+            prompt_turn = f"\nUser: {user_input}\nAssistant: "
 
         history_tokens.extend(tokenizer.encode(prompt_turn))
 
@@ -316,6 +327,12 @@ def main() -> None:
     parser.add_argument(
         "--stream", action="store_true", help="Stream generated tokens in real-time"
     )
+    parser.add_argument(
+        "--model-path",
+        type=str,
+        default=None,
+        help="Optional path to custom model weights (.pth)",
+    )
     parser.add_argument("--eval-text", type=str, default="")
     parser.add_argument("--eval-prompt", type=str, default="")
     args = parser.parse_args()
@@ -331,7 +348,7 @@ def main() -> None:
         )
 
     tokenizer = spm.SentencePieceProcessor(model_file=tokenizer_file)
-    model = load_model(device)
+    model = load_model(device, model_path=args.model_path)
 
     if args.chat:
         chat_loop(
