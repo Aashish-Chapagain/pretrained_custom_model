@@ -24,9 +24,7 @@ print(f"Using device: {device}")
 
 print("Loading tokenizer...")
 
-sp = spm.SentencePieceProcessor(
-    model_file=f"{TOKENIZER['model_prefix']}.model"
-)
+sp = spm.SentencePieceProcessor(model_file=f"{TOKENIZER['model_prefix']}.model")
 
 
 # --------------------------------------------------
@@ -37,10 +35,7 @@ print("Loading model...")
 
 model = MiniLLM()
 
-state_dict = torch.load(
-    TRAINING["final_model_path"],
-    map_location="cpu"
-)
+state_dict = torch.load(TRAINING["final_model_path"], map_location="cpu")
 
 model.load_state_dict(state_dict)
 
@@ -54,6 +49,7 @@ print("Model loaded.")
 # Tokenize
 # --------------------------------------------------
 
+
 def encode(text):
     return sp.encode(text, out_type=int)
 
@@ -61,6 +57,7 @@ def encode(text):
 # --------------------------------------------------
 # Score one continuation
 # --------------------------------------------------
+
 
 @torch.no_grad()
 def score_continuation(context, continuation):
@@ -90,7 +87,7 @@ def score_continuation(context, continuation):
     tokens = context_tokens + continuation_tokens
 
     # Truncate if necessary
-    tokens = tokens[:MODEL["max_seq_len"]]
+    tokens = tokens[: MODEL["max_seq_len"]]
 
     input_ids = torch.tensor(
         [tokens[:-1]],
@@ -119,18 +116,14 @@ def score_continuation(context, continuation):
 
         token_log_prob = log_probs[0, i, token_id]
 
-        continuation_log_probs.append(
-            token_log_prob.item()
-        )
+        continuation_log_probs.append(token_log_prob.item())
 
     if not continuation_log_probs:
         return float("-inf")
 
     # Average rather than total log probability.
     # This prevents shorter answers from being unfairly favored.
-    return sum(continuation_log_probs) / len(
-        continuation_log_probs
-    )
+    return sum(continuation_log_probs) / len(continuation_log_probs)
 
 
 # --------------------------------------------------

@@ -6,22 +6,25 @@ from torch.nn import (
     Module,
     TransformerEncoder,
     TransformerEncoderLayer,
+    init,
 )
-from torch.nn import init
-
-from config.settings import MODEL
 
 
 class MiniLLM(Module):
+    """Standalone MiniLLM Transformer Architecture.
+
+    Self-contained decoder-style transformer with causal masking.
+    """
+
     def __init__(
         self,
-        vocab_size: int = MODEL["vocab_size"],
-        embedding_dim: int = MODEL["embedding_dim"],
-        num_heads: int = MODEL["num_heads"],
-        num_layers: int = MODEL["num_layers"],
-        max_seq_len: int = MODEL["max_seq_len"],
-        ffn_dim: int = MODEL["ffn_dim"],
-        dropout: float = MODEL["dropout"],
+        vocab_size: int = 5000,
+        embedding_dim: int = 256,
+        num_heads: int = 8,
+        num_layers: int = 6,
+        max_seq_len: int = 256,
+        ffn_dim: int = 1024,
+        dropout: float = 0.1,
     ) -> None:
         super().__init__()
         self.max_seq_len = max_seq_len
@@ -63,10 +66,3 @@ class MiniLLM(Module):
         attn_mask = self.causal_mask[:seq_len, :seq_len]
         output = self.transformer(x, mask=attn_mask)
         return self.output_layer(output)
-
-
-if __name__ == "__main__":
-    model = MiniLLM()
-    input_seq = torch.randint(0, MODEL["vocab_size"], (1, 10))
-    output = model(input_seq)
-    print(output.shape)

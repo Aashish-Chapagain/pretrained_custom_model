@@ -1,5 +1,8 @@
 torch
-torch-directml
+torch-directml; sys_platform == 'win32'
 numpy
-datasets
 sentencepiece
+datasets
+tqdm
+deepeval
+

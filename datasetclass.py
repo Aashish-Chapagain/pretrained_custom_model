@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -13,6 +14,14 @@ class LLMDataset(Dataset):
         stride: int = DATASET["stride"],
         vocab_size: int = MODEL["vocab_size"],
     ) -> None:
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(
+                f"Tokenized dataset file '{file_path}' not found.\n"
+                "To generate it, please run:\n"
+                "  1. python createdataset.py\n"
+                "  2. python tokenizer.py"
+            )
+
         if sequence_length <= 0:
             raise ValueError(f"sequence_length must be positive, got {sequence_length}")
         if stride <= 0:
@@ -21,7 +30,7 @@ class LLMDataset(Dataset):
         self.tokens = torch.tensor(np.load(file_path), dtype=torch.long)
         if self.tokens.ndim != 1:
             raise ValueError(f"Token array must be 1D, got shape {tuple(self.tokens.shape)}")
-        if self.tokens.numel() < sequence_length:
+        if self.tokens.numel() < sequence_length + 1:
             raise ValueError(
                 f"Token dataset is too short for sequence_length={sequence_length}: "
                 f"got {self.tokens.numel()} tokens"
@@ -40,9 +49,9 @@ class LLMDataset(Dataset):
         self.vocab_size = vocab_size
 
     def __len__(self) -> int:
-        if self.tokens.numel() < self.sequence_length:
+        if self.tokens.numel() < self.sequence_length + 1:
             return 0
-        return (self.tokens.numel() - self.sequence_length) // self.stride + 1
+        return (self.tokens.numel() - self.sequence_length - 1) // self.stride + 1
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         if idx < 0 or idx >= len(self):
